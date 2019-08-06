@@ -36,13 +36,12 @@ class Compiler(object):
                         infile = self.storage.path(input_path)
                     except NotImplementedError:
                         infile = finders.find(input_path)
-                    outfile = compiler.output_path(infile, compiler.output_extension)
-                    outdated = compiler.is_outdated(infile, outfile)
-                    compiler.compile_file(infile, outfile,
+                    out_path = compiler.output_path(input_path, compiler.output_extension)
+                    outdated = compiler.is_outdated(input_path, out_path)
+                    compiler.compile_file(infile, out_path,
                                           outdated=outdated, force=force,
                                           **compiler_options)
-
-                    return compiler.output_path(input_path, compiler.output_extension)
+                    return out_path
             else:
                 return input_path
 
@@ -81,7 +80,7 @@ class CompilerBase(object):
         return '.'.join((path[0], extension))
 
     def is_outdated(self, infile, outfile):
-        if not os.path.exists(outfile):
+        if not self.storage.exists(outfile):
             return True
 
         try:
@@ -148,6 +147,8 @@ class SubProcessCompiler(CompilerBase):
             # Decide what to do with captured stdout.
             if stdout:
                 if stdout_captured:
-                    shutil.move(stdout.name, os.path.join(cwd or os.curdir, stdout_captured))
+                    with open(stdout.name, 'r') as file:
+                        self.save_file(stdout_captured, file.read())
+                        os.remove(stdout.name)
                 else:
                     os.remove(stdout.name)
