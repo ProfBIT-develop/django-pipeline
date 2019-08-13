@@ -43,7 +43,6 @@ class Compiler(object):
                     outfile = compiler.output_path(
                         infile, compiler.output_extension)
                     outdated = compiler.is_outdated(input_path, out_path)
-                    print(infile, outfile, out_path)
                     compiler.compile_file(infile, outfile,
                                           outdated=outdated, force=force,
                                           **compiler_options)
