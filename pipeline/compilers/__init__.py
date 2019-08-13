@@ -34,25 +34,28 @@ class Compiler(object):
                 if compiler.match_file(input_path):
                     try:
                         infile = self.storage.path(input_path)
+                        local_storage = True
                     except NotImplementedError:
                         infile = finders.find(input_path)
-                    out_path = compiler.output_path(input_path, compiler.output_extension)
+                        local_storage = False
+                    out_path = compiler.output_path(
+                        input_path, compiler.output_extension)
+                    outfile = compiler.output_path(
+                        infile, compiler.output_extension)
                     outdated = compiler.is_outdated(input_path, out_path)
-                    compiler.compile_file(infile, out_path,
+                    print(infile, outfile, out_path)
+                    compiler.compile_file(infile, outfile,
                                           outdated=outdated, force=force,
                                           **compiler_options)
+                    with open(outfile, 'r') as file:
+                        compiler.save_file(out_path, file.read())
+                    if not local_storage:
+                        os.remove(outfile)
                     return out_path
             else:
                 return input_path
 
-        try:
-            import multiprocessing
-            from concurrent import futures
-        except ImportError:
-            return list(map(_compile, paths))
-        else:
-            with futures.ThreadPoolExecutor(max_workers=multiprocessing.cpu_count()) as executor:
-                return list(executor.map(_compile, paths))
+        return list(map(_compile, paths))
 
 
 class CompilerBase(object):
@@ -147,8 +150,7 @@ class SubProcessCompiler(CompilerBase):
             # Decide what to do with captured stdout.
             if stdout:
                 if stdout_captured:
-                    with open(stdout.name, 'r') as file:
-                        self.save_file(stdout_captured, file.read())
-                        os.remove(stdout.name)
+                    shutil.move(stdout.name, os.path.join(cwd or os.curdir,
+                                                          stdout_captured))
                 else:
                     os.remove(stdout.name)
